@@ -12,6 +12,8 @@
 #include <vector>
 #include <iostream>
 
+#define MAX_ITERS 30
+//#define DEBUG_WGPS
 
 void run(int argc, char** argv)
 {
@@ -67,7 +69,7 @@ void run(int argc, char** argv)
 
         // Запускаем кернел (несколько раз и с замером времени выполнения)
         std::vector<double> times;
-        for (int iter = 0; iter < 10; ++iter) {
+        for (int iter = 0; iter < MAX_ITERS; ++iter) {
             timer t;
 
             // Настраиваем размер рабочего пространства (n) и размер рабочих групп в этом рабочем пространстве (GROUP_SIZE=256)
@@ -122,7 +124,7 @@ void run(int argc, char** argv)
         std::vector<double> times;
 
         // TODO Почти тот же код что с плохим кернелом, но теперь с хорошим, рекомендуется копи-паста
-        for (int iter = 0; iter < 10; ++iter) {
+        for (int iter = 0; iter < MAX_ITERS; ++iter) {
             timer t;
 
             // Настраиваем размер рабочего пространства (n) и размер рабочих групп в этом рабочем пространстве (GROUP_SIZE=256)
@@ -163,6 +165,111 @@ void run(int argc, char** argv)
             rassert(cs[i] == as[i] + bs[i], 321418230365731436, cs[i], as[i] + bs[i], i);
         }
     }
+
+
+    #ifdef DEBUG_WGPS
+        {
+        std::cout << "Running (wrong dims) BAD matrix kernel..." << std::endl;
+
+        // Запускаем кернел (несколько раз и с замером времени выполнения)
+        std::vector<double> times;
+        for (int iter = 0; iter < MAX_ITERS; ++iter) {
+            timer t;
+
+            // Настраиваем размер рабочего пространства (n) и размер рабочих групп в этом рабочем пространстве (GROUP_SIZE=256)
+            // Обратите внимание что сейчас указана рабочая группа размера 1х1 в рабочем пространстве width x height, это не то что вы хотите
+            // TODO И в плохом и в хорошем кернеле рабочая группа обязана состоять из 256 work-items
+            
+            // 		WorkSize(size_t groupSizeX, size_t groupSizeY, size_t workSizeX, size_t workSizeY)
+            // для good рядом стоят y, не рядом стоят x
+            // для bad все наоборот
+            //    int idx = y * width + x;
+
+            gpu::WorkSize workSize(256, 1, width, height);
+
+            // Запускаем кернел, с указанием размера рабочего пространства и передачей всех аргументов
+            // Если хотите - можете удалить ветвление здесь и оставить только тот код который соответствует вашему выбору API
+            // TODO раскомментируйте вызов вашего API и поправьте его
+            if (context.type() == gpu::Context::TypeOpenCL) {
+                // ocl_aplusb_matrix_bad.exec(workSize, a_gpu, ...);
+            } else if (context.type() == gpu::Context::TypeCUDA) {
+                cuda::aplusb_matrix_bad(workSize, a_gpu, b_gpu, c_gpu, width, height);
+            } else if (context.type() == gpu::Context::TypeVulkan) {
+                struct {
+                    unsigned int width;
+                    unsigned int height;
+                } params = { width, height };
+                // vk_aplusb_matrix_bad.exec(params, workSize, a_gpu, ...);
+            } else {
+                rassert(false, 4531412341, context.type());
+            }
+
+            times.push_back(t.elapsed());
+        }
+        std::cout << "a + b matrix kernel times (in seconds) - " << stats::valuesStatsLine(times) << std::endl;
+
+        // TODO Удалите этот rassert - вычислите достигнутую эффективную пропускную способность видеопамяти
+        double memory_size_in_gb = sizeof(unsigned int) * 3 * (width*height) / 1024.0 / 1024.0 / 1024.0;
+        std::cout << "a + b matrix kernel median VRAM bandwidth: " << memory_size_in_gb / stats::median(times) << " GB/s" << std::endl;
+        //rassert(false, 54623414231);
+
+        // TODO Считываем результат по PCI-E шине: GPU VRAM -> CPU RAM
+        std::vector<unsigned int> cs(width * height, 0);
+        c_gpu.readN(cs.data(), width * height);
+
+        // Сверяем результат
+        for (size_t i = 0; i < width * height; ++i) {
+            rassert(cs[i] == as[i] + bs[i], 321418230421312512, cs[i], as[i] + bs[i], i);
+        }
+    }
+
+    {
+        std::cout << "Running GOOD (wrong dims) matrix kernel..." << std::endl;
+        std::vector<double> times;
+
+        // TODO Почти тот же код что с плохим кернелом, но теперь с хорошим, рекомендуется копи-паста
+        for (int iter = 0; iter < MAX_ITERS; ++iter) {
+            timer t;
+
+            // Настраиваем размер рабочего пространства (n) и размер рабочих групп в этом рабочем пространстве (GROUP_SIZE=256)
+            // Обратите внимание что сейчас указана рабочая группа размера 1х1 в рабочем пространстве width x height, это не то что вы хотите
+            // TODO И в плохом и в хорошем кернеле рабочая группа обязана состоять из 256 work-items
+            //    int idx = x * height + y;
+
+            gpu::WorkSize workSize(256, 1, width, height);
+            // Запускаем кернел, с указанием размера рабочего пространства и передачей всех аргументов
+            // Если хотите - можете удалить ветвление здесь и оставить только тот код который соответствует вашему выбору API
+            // TODO раскомментируйте вызов вашего API и поправьте его
+            if (context.type() == gpu::Context::TypeOpenCL) {
+                // ocl_aplusb_matrix_bad.exec(workSize, a_gpu, ...);
+            } else if (context.type() == gpu::Context::TypeCUDA) {
+                cuda::aplusb_matrix_good(workSize, a_gpu, b_gpu, c_gpu, width, height);
+            } else if (context.type() == gpu::Context::TypeVulkan) {
+                struct {
+                    unsigned int width;
+                    unsigned int height;
+                } params = { width, height };
+                // vk_aplusb_matrix_bad.exec(params, workSize, a_gpu, ...);
+            } else {
+                rassert(false, 4531412341, context.type());
+            }
+
+            times.push_back(t.elapsed());
+        }
+        std::cout << "a + b matrix kernel times (in seconds) - " << stats::valuesStatsLine(times) << std::endl;
+        
+        double memory_size_in_gb = sizeof(unsigned int) * 3 * (width*height) / 1024.0 / 1024.0 / 1024.0;
+        std::cout << "a + b matrix kernel median VRAM bandwidth: " << memory_size_in_gb / stats::median(times) << " GB/s" << std::endl;
+        // TODO Считываем результат по PCI-E шине: GPU VRAM -> CPU RAM
+        std::vector<unsigned int> cs(width * height, 0);
+        c_gpu.readN(cs.data(), width * height);
+        // Сверяем результат
+        for (size_t i = 0; i < width * height; ++i) {
+            rassert(cs[i] == as[i] + bs[i], 321418230365731436, cs[i], as[i] + bs[i], i);
+        }
+    }
+    #endif
+
 }
 
 int main(int argc, char** argv)
