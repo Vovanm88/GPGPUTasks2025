@@ -26,7 +26,7 @@ __global__ void aplusb_matrix_bad(const unsigned int* a,
         return;
     }
 
-    int idx = x * height + y;
+    int idx = y * width + x;
     c[idx] = a[idx] + b[idx];
 }
 

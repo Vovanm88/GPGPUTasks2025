@@ -4,7 +4,7 @@
 set -ev
 
 # Parse script arguments to skip validation layers if --no-validation-layers is present
-SKIP_VALIDATION_LAYERS=0
+SKIP_VALIDATION_LAYERS=1
 for arg in "$@"; do
   [ "$arg" = "--no-validation-layers" ] && SKIP_VALIDATION_LAYERS=1
 done

@@ -2,5 +2,7 @@
 **/generated_kernels/*
 .idea
 build*
+scripts/*/*.zip*
+scripts/*/*Vulkan*
 cmake-build*
 .vs
