@@ -12,7 +12,7 @@
 #include <vector>
 #include <iostream>
 
-#define MAX_ITERS 30
+#define MAX_ITERS 10
 //#define DEBUG_WGPS
 
 void run(int argc, char** argv)
