@@ -156,7 +156,7 @@ int main()
 			 	
 			cl_uint deviceMaxFreq = 0;
 			OCL_SAFE_CALL(clGetDeviceInfo(devices[deviceIndex], CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &deviceMaxFreq, nullptr));
-			std::cout << "\t\tDevice max clock frequency in MHz: " << deviceMaxFreq << std::endl;
+			std::cout << "\t\tDevice max clock frequency in MHz: " << deviceMaxFreq << std::endl;	
 		}
 	}
 
