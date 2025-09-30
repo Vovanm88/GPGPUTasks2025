@@ -5,6 +5,24 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <string>
+
+
+
+std::string dev_type_to_str(cl_device_type value){
+	if(value == CL_DEVICE_TYPE_CPU)
+		return "CPU";
+	else if(value == CL_DEVICE_TYPE_GPU)
+		return "GPU";
+	else if(value == CL_DEVICE_TYPE_ACCELERATOR)
+		return "ACCELERATOR";
+	else if(value == CL_DEVICE_TYPE_DEFAULT)
+		return "DEFAULT";
+	else if(value == CL_DEVICE_TYPE_ALL)
+		return "ALL";
+	else
+		return "UNKNOWN";
+}
 
 template<typename T>
 std::string to_string(T value)
@@ -25,6 +43,7 @@ void reportError(cl_int err, const std::string &filename, int line)
 	std::string message = "OpenCL error code " + to_string(err) + " encountered at " + filename + ":" + to_string(line);
 	throw std::runtime_error(message);
 }
+
 
 #define OCL_SAFE_CALL(expr) reportError(expr, __FILE__, __LINE__)
 
@@ -67,7 +86,7 @@ int main()
 		// Т.к. это некорректный идентификатор параметра платформы - то метод вернет код ошибки
 		// Макрос OCL_SAFE_CALL заметит это, и кинет ошибку с кодом
 		// Откройте таблицу с кодами ошибок:
-		// libs/clew/CL/cl.h:103
+		// libs/clew/CL/cl.h:103 // тут должно быть очевидно 179 :)
 		// P.S. Быстрый переход к файлу в CLion: Ctrl+Shift+N -> cl.h (или даже с номером строки: cl.h:103) -> Enter
 		// Найдите там нужный код ошибки и ее название
 		// Затем откройте документацию по clGetPlatformInfo и в секции Errors найдите ошибку, с которой столкнулись
@@ -124,7 +143,7 @@ int main()
 			OCL_SAFE_CALL(clGetDeviceInfo(devices[deviceIndex], CL_DEVICE_TYPE, 0, nullptr, &deviceTypeSize));
 			cl_device_type deviceType = CL_DEVICE_TYPE_DEFAULT;
 			OCL_SAFE_CALL(clGetDeviceInfo(devices[deviceIndex], CL_DEVICE_TYPE, deviceTypeSize, &deviceType, nullptr));
-			std::cout << "\t\tDevice type: " << deviceType << std::endl;
+			std::cout << "\t\tDevice type: " << dev_type_to_str(deviceType) << std::endl;
 
 			cl_ulong deviceGlobalMemorySize = 0;
 			OCL_SAFE_CALL(clGetDeviceInfo(devices[deviceIndex], CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(cl_ulong), &deviceGlobalMemorySize, nullptr));
@@ -133,6 +152,11 @@ int main()
 			cl_uint deviceGlobalCacheLineSize = 0;
 			OCL_SAFE_CALL(clGetDeviceInfo(devices[deviceIndex], CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE, sizeof(cl_uint), &deviceGlobalCacheLineSize, nullptr));
 			std::cout << "\t\tDevice memory cache line in bytes: " << deviceGlobalCacheLineSize << std::endl;
+
+			 	
+			cl_uint deviceMaxFreq = 0;
+			OCL_SAFE_CALL(clGetDeviceInfo(devices[deviceIndex], CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(cl_uint), &deviceMaxFreq, nullptr));
+			std::cout << "\t\tDevice max clock frequency in MHz: " << deviceMaxFreq << std::endl;
 		}
 	}
 
